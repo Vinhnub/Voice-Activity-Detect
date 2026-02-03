@@ -209,5 +209,7 @@ __marimo__/
 
 data/raw
 data/processed
+data/external
 data/feature
 data/test
+data
