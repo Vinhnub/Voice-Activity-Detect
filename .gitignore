@@ -213,3 +213,5 @@ data/external
 data/feature
 data/test
 data
+
+src/train/*.pkl
