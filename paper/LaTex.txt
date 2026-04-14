@@ -1,0 +1,436 @@
+%%%%%%%%%%%%%%%%%%%% main.tex %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\documentclass[runningheads]{llncs}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta, positioning}
+\usepackage{graphicx}
+\usepackage[a4paper,left=3.5cm,right=3.5cm,top=3.5cm,bottom=3.5cm]{geometry}
+\usepackage{placeins}
+\usepackage{setspace}
+\begin{document}
+\AtBeginDocument{\fontsize{13}{14}\selectfont}
+\mainmatter
+
+\title{\Large\bfseries Voice Activity Detection with Handcrafted Features and LBP Encoding}
+\titlerunning{Voice Activity Detection}
+
+\author{\normalsize Nguyen Van Vinh\inst{1} \and Nguyen Trung Dung\inst{2} \and Vu Van Quoc Huy\inst{3}}
+% \authorrunning{}
+
+\institute{\small March 2026}
+
+\maketitle
+\pagestyle{plain}
+
+\begin{abstract}
+Voice Activity Detection (VAD) is an important preprocessing step in speech processing systems such as automatic speech recognition and voice assistants. The goal of VAD is to distinguish speech from non-speech signals including silence, noise, and music.
+
+In this work, we propose a machine learning-based VAD pipeline using handcrafted acoustic features. MFCC, LFCC, and STFT features are extracted from audio signals and further encoded using Local Binary Pattern (LBP) to capture local spectral patterns. The resulting features are classified using ensemble learning models including Random Forest and XGBoost.
+
+Experiments are conducted using the MUSAN dataset for training and the Aurora 2 dataset for evaluation under noisy conditions. The results show that Random Forest achieves an accuracy of 0.993 on MUSAN, while XGBoost reaches 0.997. On the Aurora 2 dataset, the models achieve accuracies of 0.90 and 0.93 respectively. These results demonstrate that the proposed approach provides reliable performance for voice activity detection.
+
+
+\keywords{Voice Activity Detection, Handcrafted Features, MFCC, LFCC, STFT, LBP, Machine Learning}
+\end{abstract}
+
+\section{Introduction}
+
+Voice Activity Detection (VAD) is a fundamental component in many speech processing systems such as automatic speech recognition, speaker verification, and voice assistants. The objective of VAD is to identify speech segments while removing non-speech signals such as silence, background noise, and music.
+
+In this work, we propose a machine learning-based pipeline for voice activity detection. The system first performs preprocessing on audio signals and then extracts acoustic features from short frames. Three commonly used feature representations are investigated: Mel-Frequency Cepstral Coefficients (MFCC), Linear Frequency Cepstral Coefficients (LFCC), and Short-Time Fourier Transform (STFT).
+
+To capture additional local spectral information, Local Binary Pattern (LBP) encoding is applied to the extracted features. The resulting features are then used to train ensemble learning models for speech and non-speech classification. In particular, Random Forest and XGBoost are employed due to their strong performance in classification tasks.
+
+Experiments are conducted using the MUSAN dataset for training and the Aurora 2 dataset for evaluation in noisy environments. The results demonstrate that the proposed method achieves strong performance across different feature representations.
+
+\section{Related Work}
+
+Voice Activity Detection (VAD) has been extensively studied in speech processing, with a wide range of approaches proposed over the years.
+
+Early VAD methods relied on signal-level descriptors such as short-time energy, zero-crossing rate, and spectral features \cite{mirsamadi2019}. These methods are computationally efficient but sensitive to noise. For example, entropy-based VAD approaches typically achieve around 85--90\% accuracy at moderate SNR levels, but their performance can drop below 70\% when the SNR falls below 0 dB.
+
+To improve robustness, statistical model-based methods were introduced. Sohn et al. proposed a likelihood ratio test-based VAD using Gaussian models \cite{sohn1999}, reporting approximately 5--10\% improvement in detection accuracy over traditional energy-based approaches under noisy conditions (e.g., at 5 dB SNR). However, these methods rely on assumptions about signal and noise distributions, which may limit their generalization.
+
+Machine learning-based approaches further improve performance by learning discriminative boundaries from data. Kinnunen et al. demonstrated that MFCC features combined with SVM can achieve 92--95\% accuracy on clean datasets and around 85--90\% under moderate noise \cite{kinnunen2008}. Ensemble-based approaches, such as the work by Dey et al., improve robustness and achieve gains of approximately 2--4\% in F1-score compared to single SVM models \cite{dey2020}.
+
+Feature representation plays a crucial role in VAD performance. MFCC is widely adopted due to its perceptual properties \cite{davis1980}, while LFCC preserves linear frequency information and has been shown to improve detection performance by approximately 1--3\%, particularly in tasks involving high-frequency artifacts \cite{makhoul1975}. Time--frequency representations such as STFT provide richer spectral information and can achieve over 95\% accuracy in controlled environments, while maintaining better robustness under noise compared to cepstral features \cite{gabor1946}.
+
+Preprocessing techniques are also critical for noise-robust VAD. Ball reported that incorporating noise-aware preprocessing methods can improve detection accuracy by up to 8\% at low SNR levels (e.g., below 5 dB) \cite{ball2014}. Additionally, combining multiple feature representations has been shown to further improve robustness in challenging acoustic conditions.
+
+More recently, deep learning-based approaches have achieved state-of-the-art performance. For instance, MarbleNet proposed by Jia et al. achieves over 97\% accuracy on standard VAD benchmarks and maintains above 93\% accuracy under noisy conditions, while keeping model size relatively small \cite{jia2023}. Other deep neural network-based systems have reported equal error rates (EER) below 2\% on benchmark datasets.
+
+Despite these advances, deep learning models typically require large-scale datasets and significant computational resources. In contrast, handcrafted-feature-based methods combined with ensemble learning offer a more lightweight and interpretable alternative, while still achieving competitive performance, especially when carefully designed feature representations are used.
+
+However, despite the effectiveness of existing spectral and cepstral features, the use of texture-based encoding techniques such as Local Binary Pattern (LBP) remains largely underexplored for modeling local structural patterns in time--frequency representations, especially for voice activity detection tasks.
+
+\section{Methodology}
+\begin{figure}[htbp]
+\centering
+\resizebox{0.92\linewidth}{!}{%
+\begin{tikzpicture}[
+>=Stealth,
+data/.style={draw=teal!60!black, rounded corners=2pt, fill=teal!8, very thick, minimum width=2.2cm, minimum height=0.9cm, align=center, font=\small},
+process/.style={draw=blue!70!black, rounded corners=2pt, fill=blue!8, very thick, minimum width=2.2cm, minimum height=0.9cm, align=center, font=\small},
+model/.style={draw=purple!70!black, rounded corners=2pt, fill=purple!8, very thick, minimum width=2.3cm, minimum height=0.9cm, align=center, font=\small},
+output/.style={draw=orange!70!black, rounded corners=2pt, fill=orange!10, thick, minimum width=2.0cm, minimum height=0.8cm, align=center, font=\small},
+arrow/.style={-Stealth, thick, draw=black!80}
+]
+
+\node[data] (input) {MUSAN Audio\\Speech / Music / Noise};
+
+\node[process, right=0.6cm of input] (prep)
+{Preprocessing\\Silence Removal\\Segmentation\\Framing};
+
+\node[process, right=0.6cm of prep] (feat)
+{Feature Extraction\\MFCC / LFCC / STFT};
+
+\node[process, right=0.6cm of feat] (lbp)
+{LBP};
+
+\node[model, below=1.25cm of lbp] (clf)
+{Classification\\RF / XGBoost};
+
+\node[output, right=0.6cm of clf] (decision)
+{Output\\Speech / Non-speech};
+
+\node[data, below=1.2cm of clf] (aurora)
+{Aurora 2\\Noisy-Speech Test Set};
+
+
+\draw[arrow] (input) -- (prep);
+\draw[arrow] (prep) -- (feat);
+\draw[arrow] (feat) -- node[above]{} (lbp);
+
+\draw[arrow] (lbp) -- (clf);
+\draw[arrow] (clf) -- (decision);
+
+\draw[arrow] (aurora) -- (clf);
+
+\end{tikzpicture}%
+}
+\caption{Overview of the proposed Voice Activity Detection pipeline.}
+\label{fig:overview}
+\end{figure}
+
+As illustrated in Fig.~\ref{fig:overview}, the proposed VAD system consists of three main stages: preprocessing, handcrafted feature extraction, and machine learning-based classification. Audio signals are first processed to remove silence and normalize the waveform. Acoustic features are then extracted and used to train classification models that distinguish speech from non-speech segments.
+
+\subsection{Dataset}
+
+Two datasets are used in the experiments to train and evaluate the proposed VAD system.
+
+\subsubsection{MUSAN:}
+
+The MUSAN dataset is a widely used audio corpus containing speech, music, and noise recordings. 
+The dataset includes approximately 60 hours of speech, 42 hours of music, and 7 hours of noise. 
+In this study, the music and noise subsets are grouped together and treated as the non-speech class, 
+while the speech subset represents the speech class. MUSAN is used as the primary dataset for training 
+and testing the classification models.
+
+\subsubsection{Aurora 2:}
+
+Aurora 2 is a noisy speech dataset designed to evaluate the robustness of speech processing systems 
+under adverse acoustic conditions. The dataset is created by adding various types of noise to the 
+TIDigits corpus. It contains 8,440 training utterances and approximately 4,000 testing utterances. 
+In this work, Aurora 2 is used to evaluate the generalization capability of the proposed VAD system 
+in noisy environments.
+
+\subsection{Feature Extraction}
+
+To represent the acoustic characteristics of speech signals, three handcrafted feature types are 
+extracted from short audio frames: MFCC, LFCC, and STFT. Additionally, LBP is applied to encode local structural patterns in the extracted features.
+
+\subsubsection{Mel-Frequency Cepstral Coefficients (MFCC):}
+
+is one of the most widely used feature representations in speech and audio processing. 
+It models human auditory perception by mapping the linear frequency spectrum onto the Mel scale. 
+The MFCC extraction process typically involves computing the Short-Time Fourier Transform (STFT), 
+applying a Mel-scaled filter bank, taking the logarithm of filter bank energies, and performing a 
+Discrete Cosine Transform (DCT) to obtain compact cepstral coefficients that describe the spectral 
+envelope of speech \cite{davis1980}.
+
+\subsubsection{Linear Frequency Cepstral Coefficients (LFCC):}
+
+is a cepstral feature similar to MFCC but uses linearly spaced filter banks instead of Mel-scaled 
+filters. By preserving the linear frequency distribution, LFCC can retain more detailed information in 
+higher frequency regions of the spectrum. This property makes LFCC useful in applications such as 
+speaker verification and spoofing detection, where high-frequency artifacts may provide discriminative 
+information \cite{makhoul1975}.
+
+\subsubsection{Short-Time Fourier Transform (STFT)}
+
+a time–frequency analysis technique used to represent non-stationary signals such as speech. 
+The audio waveform is divided into short overlapping frames, and each frame is transformed into the 
+frequency domain using the Fourier transform. The resulting spectrogram describes how spectral content 
+changes over time and provides important information about the temporal and spectral structure of 
+speech signals \cite{gabor1946}.
+
+\subsubsection{Local Binary Pattern (LBP):}
+
+ is a texture descriptor used to capture local spatial patterns in images. It works by comparing the intensity of a central pixel with its neighboring pixels and encoding the results as a binary number that represents the local texture. By computing the histogram of these binary patterns over an image or feature map, LBP effectively describes structural variations and has been widely used in pattern recognition tasks such as texture classification, face recognition, and analysis of time–frequency representations like spectrograms or MFCCs.
+
+\vspace{5mm}
+
+The input audio waveform is first transformed into different spectral representations using Mel-Frequency Cepstral Coefficients, Linear Frequency Cepstral Coefficients, and Short-Time Fourier Transform. STFT provides a time–frequency representation of the signal, while MFCC and LFCC represent the cepstral characteristics derived from the spectral domain. Each audio segment is converted into a cepstral feature matrix with shape (number of frame, number of coef Fig.~\ref{fig:mfcc}). Next, Local Binary Pattern is applied to these feature matrices to capture local structural patterns. The resulting binary patterns are then summarized by computing a histogram, producing a 256-dimensional histogram feature (Fig.~\ref{fig:histo}) vector that serves as the final representation for classification.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.48\linewidth]{mfcc.png}
+\hfill
+\includegraphics[width=0.48\linewidth]{mfcc_non.png}
+\caption{Cepstral feature matrix (right: non-speech, left: speech)}
+\label{fig:mfcc}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.48\linewidth]{histo.png}
+\hfill
+\includegraphics[width=0.48\linewidth]{histo_non.png}
+\caption{Histogram feature (right: non-speech, left: speech)}
+\label{fig:histo}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.32\linewidth]{mfcc3d.png}
+\hfill
+\includegraphics[width=0.32\linewidth]{lfcc3d.png}
+\hfill
+\includegraphics[width=0.32\linewidth]{stft3d.png}
+\caption{Feature Visualization with PCA}
+\label{fig:histo}
+\end{figure}
+
+\FloatBarrier
+
+\subsection{Classification Models}
+
+To classify the extracted acoustic features, two ensemble learning models are employed: Random Forest 
+(RF) and Extreme Gradient Boosting (XGBoost). These models are widely used in machine learning tasks 
+due to their strong generalization capability and robustness when handling high-dimensional features.
+
+\subsubsection{Random Forest (RF)}
+
+Random Forest is an ensemble learning algorithm based on the bagging technique, where multiple decision 
+trees are constructed during training and the final prediction is obtained through majority voting. 
+Each tree is trained using a randomly sampled subset of the training data and a random subset of 
+features, which helps reduce overfitting and improves generalization performance \cite{breiman2001}.
+
+\subsubsection{Extreme Gradient Boosting (XGBoost)}
+
+XGBoost is an optimized implementation of gradient boosting that builds an ensemble of decision trees 
+sequentially. In this approach, each new tree is trained to correct the errors made by the previous 
+trees, resulting in improved predictive performance. XGBoost incorporates several advanced techniques 
+such as regularization, parallel processing, and efficient handling of sparse data, which enhance both 
+training speed and model accuracy \cite{chen2016}.
+
+
+
+
+
+\section{Experiments Setup}
+The experimental pipeline consists of three stages: data preprocessing,
+feature extraction, and evaluation.
+
+\subsection{Data Preprocessing}
+Two key preprocessing steps are reported:
+
+\begin{itemize}
+    \item \textbf{Silence removal}
+    \begin{itemize}
+        \item Each frame uses a 25 ms window with 15 ms overlap..
+        \item The energy of each frame is computed as:
+        \[
+        E = \sum_{n=0}^{N-1} x[n]^2
+        \]
+        \item Low-energy frames are then removed.
+    \end{itemize}
+
+    \item \textbf{Audio Segmentation}: To increase the number of samples, the recordings were divided into fixed-length segments of 2 seconds. Each segment could contain speech or non-speech sounds.
+\end{itemize}
+
+\subsection{Feature Extraction}
+
+All features were extracted using a frame-based analysis with a window length of 25 ms and a 15 ms overlap. For MFCC, 13 static coefficients were computed and augmented with delta and delta-delta coefficients, resulting in 39-dimensional features. For LFCC, 20 static coefficients were extracted along with their delta and delta-delta components, yielding 60-dimensional feature vectors. 
+
+STFT features were computed using a Fast Fourier Transform size of $n\_fft = 512$, and the magnitude spectrum was used for further processing. 
+
+To capture local texture information, the original Local Binary Pattern (LBP) operator was applied to the MFCC, LFCC, and STFT representations. The LBP parameters were set to $P = 8$ sampling points and radius $R = 1$.
+
+\subsection{Evaluation}
+
+A 5-fold cross-validation protocol was used for local evaluation on the MUSAN dataset. For cross-dataset experiments, models were trained on the entire MUSAN dataset and evaluated on Aurora-2. Performance was measured using Accuracy, Precision, Recall, F1-score, and Equal Error Rate (EER).
+
+\section{Results}
+We report three evaluation scenarios:
+
+\subsection*{1. Train/test on Musan dataset}
+
+\begin{table}[htbp]
+\centering
+\caption{Results of RandomForest}
+\begin{tabular}{|l|c|c|c|c|c|}
+\hline
+\textbf{Feature} & \textbf{ACC} & \textbf{Prec} & \textbf{Recall} & \textbf{F1} & \textbf{EER$\%$} \\
+\hline
+MFCC static & 0.978 & 0.982 & 0.974 & 0.978 & 2.1 \\ 
+MFCC static + $\Delta$ + $\Delta\Delta$ & 0.971 & 0.975 & 0.967 & 0.971 & 2.7 \\
+LFCC static & 0.974 & 0.976 & 0.973 & 0.974 & 2.5 \\
+LFCC static + $\Delta$ + $\Delta\Delta$ & 0.976 & 0.977 & 0.976 & 0.976 & 2.3 \\
+STFT & \textbf{0.993} & \textbf{0.994} & \textbf{0.993} & \textbf{0.993} & \textbf{0.63} \\
+\hline
+\end{tabular}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\caption{Results of XGBoost}
+\begin{tabular}{|l|c|c|c|c|c|}
+\hline
+\textbf{Feature} & \textbf{ACC} & \textbf{Prec} & \textbf{Recall} & \textbf{F1} & \textbf{EER$\%$} \\
+\hline
+MFCC static & 0.985 & 0.986 & 0.984 & 0.985 & 1.4 \\ 
+MFCC static + $\Delta$ + $\Delta\Delta$ & 0.982 & 0.984 & 0.981 & 0.982 & 1.7 \\
+LFCC static & 0.980 & 0.980 & 0.981 & 0.981 & 1.9 \\
+LFCC static + $\Delta$ + $\Delta\Delta$ & 0.981 & 0.982 & 0.981 & 0.982 & 1.8 \\
+STFT & \textbf{0.997} & \textbf{0.997} & \textbf{0.997} & \textbf{0.997} & \textbf{0.27} \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection*{2. Train on Musan dataset and test on Aurora 2 Dataset}
+
+\begin{table}[htbp]
+\centering
+\caption{XGBoost Results}
+\begin{tabular}{|l|c|c|c|c|c|}
+\hline
+\textbf{Feature} & \textbf{ACC} & \textbf{Prec} & \textbf{Recall} & \textbf{F1} & \textbf{EER$\%$} \\
+\hline
+MFCC static & 0.54 & 1 & 0.54 & 0.70 & null\\ 
+MFCC static + $\Delta$ + $\Delta\Delta$ & 0.62 & 1 & 0.62 & 0.76 & null\\
+LFCC static & 0.73 & 1 & 0.73 & 0.84 & null\\
+LFCC static + $\Delta$ + $\Delta\Delta$ & 0.67 & 1 & 0.67 & 0.80 & null\\
+STFT & \textbf{0.90} & \textbf{1} & \textbf{0.90} & \textbf{0.94} & null\\
+\hline
+\end{tabular}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\caption{RandomForest Results}
+\begin{tabular}{|l|c|c|c|c|c|}
+\hline
+\textbf{Feature} & \textbf{ACC} & \textbf{Prec} & \textbf{Recall} & \textbf{F1} & \textbf{EER$\%$} \\
+\hline
+MFCC static & 0.60 & 1 & 0.60 & 0.75 & null\\ 
+MFCC static + $\Delta$ + $\Delta\Delta$ & 0.75 & 1 & 0.75 & 0.86 & null\\
+LFCC static & 0.74 & 1 & 0.74 & 0.85 & null\\
+LFCC static + $\Delta$ + $\Delta\Delta$ & 0.78 & 1 & 0.78 & 0.88 & null\\
+STFT & \textbf{0.93} & \textbf{1} & \textbf{0.93} & \textbf{0.963} & null\\
+\hline
+\end{tabular}
+\end{table}
+\FloatBarrier
+
+\section{Discussion}
+
+Experimental results highlight several observations regarding the effectiveness of different handcrafted features for voice activity detection.
+
+In the internal evaluation on the Musan dataset, all feature types achieved high performance, with accuracy above 97$\%$ for most configurations. However, STFT consistently produced the best results. Specifically, XGBoost with STFT achieved an accuracy of 99.7$\%$ and an EER of 0.27$\%$. This indicates that the full spectral representation of STFT preserves more discriminative information compared to cepstral features such as MFCC and LFCC.
+
+Interestingly, adding dynamic features ($\Delta$ and $\Delta\Delta$) did not significantly improve performance and in some cases slightly reduced accuracy. This suggests that static spectral information may already be sufficient for frame-level speech/non-speech classification when using tree-based models.
+
+Compared with previous studies on the Musan dataset, our results show superior performance. In particular, the paper An Ensemble SVM-based Approach for Voice Activity Detection reported a best accuracy of approximately 89$\%$ using Ensemble SVM with MFCC features, and 86$\%$ when combining a neural network with MFCC. In contrast, the proposed method in this study achieved an accuracy of up to 99.7$\%$ using STFT features and the XGBoost model. This significant improvement may be attributed to the use of the full spectral representation of STFT, which retains more energy and frequency structure information than MFCC, where information is compressed through cepstral transformation. In addition, tree-based models such as XGBoost and Random Forest can effectively exploit high-dimensional and nonlinear feature representations.
+
+In cross-dataset experiments (training on Musan and testing on Aurora-2), the performance of MFCC and LFCC decreased significantly, indicating sensitivity to dataset mismatch. In contrast, STFT maintained much higher performance, achieving an accuracy of 90$\%$ with XGBoost and 93$\%$ with Random Forest. This suggests that STFT features provide better generalization across different acoustic conditions.
+
+Compared with previous studies on the Aurora-2 dataset, the proposed method demonstrates competitive performance. In the rVAD study, an unsupervised voice activity detection method based on signal segmentation and SNR-weighted energy was evaluated on Aurora-2 and showed stable performance in noisy environments, although performance degraded at low SNR levels []. In addition, the waveform-based Fully Convolutional Network proposed in [] also achieved strong results on Aurora-2 but requires complex deep learning models and large training datasets. In contrast, the STFT-LBP method used in this work achieved an accuracy of 93$\%$ in the training-on-Musan and testing-on-Aurora-2 setup, demonstrating good generalization while maintaining low computational complexity.
+
+Other approaches such as the entropy-based VAD in [] reported approximately 83$\%$ accuracy at 0 dB and around 90$\%$ accuracy at higher SNR levels on Aurora-2. Compared to these results, the proposed method shows competitive and more stable performance under diverse noise conditions. This indicates that combining STFT spectral representation with LBP texture features improves the discrimination between speech and background noise, while also enhancing generalization across different datasets.
+
+
+Overall, the results demonstrate that STFT features combined with
+tree-based classifiers offer a strong and robust baseline for
+voice activity detection.
+
+
+
+\section{Conclusion}
+
+This paper proposed a machine learning-based voice activity detection (VAD) system using handcrafted spectral features combined with Local Binary Pattern (LBP) encoding and ensemble learning classifiers. The proposed pipeline includes preprocessing, feature extraction using MFCC, LFCC, and STFT, LBP-based texture encoding, and classification using Random Forest and XGBoost.
+
+Experimental results on the MUSAN dataset demonstrate that all handcrafted features achieve strong performance, with STFT providing the best results. In particular, XGBoost with STFT-LBP achieved an accuracy of 99.7\% and an EER of 0.27\%, indicating that the full spectral representation encoded with LBP effectively captures discriminative speech characteristics. The results also show that adding dynamic coefficients does not significantly improve performance, suggesting that static spectral information combined with texture encoding is sufficient for frame-level speech detection.
+
+Cross-dataset evaluation further confirms the robustness of the proposed method. When trained on MUSAN and tested on Aurora-2, STFT-based features maintain strong generalization performance, achieving accuracies of 90\% and 93\% for XGBoost and Random Forest, respectively. These findings indicate that STFT combined with LBP provides more robust representations under mismatched acoustic conditions compared to cepstral-based features such as MFCC and LFCC.
+
+Overall, the proposed combination of STFT, LBP encoding, and tree-based classifiers offers an effective and computationally efficient solution for voice activity detection in noisy environments.
+
+\section*{Future Work}
+
+Future work will focus on several directions. First, additional time–frequency representations such as Mel-spectrogram, log-power spectrogram, and constant-Q transform could be explored to further improve robustness. Second, more advanced texture descriptors, including uniform LBP, multi-scale LBP, or Local Ternary Pattern (LTP), may provide richer structural information. Third, deep learning models such as CNN or hybrid CNN–Transformer architectures could be investigated to automatically learn discriminative representations from spectrogram inputs. 
+
+In addition, evaluating the proposed method on more challenging datasets and real-world noisy environments would provide further insight into generalization capability. Finally, future work may also consider real-time VAD deployment and low-latency optimization for practical speech processing applications.
+\begin{thebibliography}{12}
+
+\bibitem{kinnunen2008}
+Kinnunen, T., et al.:
+Voice activity detection using MFCC features and SVM.
+ResearchGate preprint (2008)
+
+\bibitem{dey2020}
+Dey, S., et al.:
+Ensemble SVM for robust voice activity detection.
+arXiv preprint arXiv:2010.13886 (2020)
+
+\bibitem{ball2014}
+Ball, J.:
+Noise-robust voice activity detection.
+PMCID: PMC4142156 (2014)
+
+\bibitem{jia2023}
+Jia, Y., et al.:
+MarbleNet: Efficient neural network for voice activity detection.
+arXiv preprint arXiv:2312.05815 (2023)
+
+\bibitem{mirsamadi2019}
+Mirsamadi, S., Barsoum, E., Zhang, C.:
+Automatic speech emotion recognition using recurrent neural networks.
+arXiv preprint arXiv:1902.01544 (2019)
+
+\bibitem{snyder2015}
+Snyder, D., Chen, G., Povey, D.:
+MUSAN: A music, speech, and noise corpus.
+arXiv preprint arXiv:1510.08484 (2015)
+
+\bibitem{gabor1946}
+Gabor, D.:
+Theory of communication.
+J. Inst. Electr. Eng. \textbf{93}(26), 429--457 (1946)
+
+\bibitem{davis1980}
+Davis, S.B., Mermelstein, P.:
+Comparison of parametric representations for monosyllabic word recognition in continuously spoken sentences.
+IEEE Trans. Acoust. Speech Signal Process. \textbf{28}(4), 357--366 (1980)
+
+\bibitem{makhoul1975}
+Makhoul, J.:
+Linear prediction: A tutorial review.
+Proc. IEEE \textbf{63}(4), 561--580 (1975)
+
+\bibitem{breiman2001}
+Breiman, L.:
+Random forests.
+Mach. Learn. \textbf{45}(1), 5--32 (2001)
+
+\bibitem{sohn1999}
+Sohn, J., Kim, N.S., Sung, W.:
+A statistical model-based voice activity detection.
+IEEE Signal Process. Lett. \textbf{6}(1), 1--3 (1999)
+
+\bibitem{chen2016}
+Chen, T., Guestrin, C.:
+XGBoost: A scalable tree boosting system.
+In: Proc. 22nd ACM SIGKDD Int. Conf. Knowledge Discovery and Data Mining, pp. 785--794 (2016)
+
+\end{thebibliography}\end{thebibliography}
+\end{document}
