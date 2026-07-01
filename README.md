@@ -74,4 +74,4 @@ We are actively restructuring this codebase from a research prototype (Jupyter N
 
 ## 📄 Citation
 
-If you find this code helpful in your research, please refer to the main paper located in `paper_reference/Voice_Activity_Detection_with_Handcrafted_Features_and_LBP_Encoding.pdf`.
+If you find this code helpful in your research, please refer to the main paper located in `paper_reference/Voice_Activity_Detection_with_Handcrafted_Features_and_LBP_Encoding.pdf`, `paper_reference/Enhancing_Voice_Activity_Detection_Using_CLBP_Based_Texture_Encoding_on_Spectral_Features.pdf`
