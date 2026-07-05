@@ -130,6 +130,7 @@ def build_mfcc_dataset(
 
             feature = np.concatenate([h_s, h_m, h_c])
             all_feats.append(feature)
+            break
 
         #print(f"{wav_path} -> {len(segments)} segments")
 
@@ -154,5 +155,5 @@ wav_list = [
 print(wav_list)
 X_mfcc = build_mfcc_dataset(
     wav_list,
-    out_path=f"E:/PythonFile/Project/Voice-Activity-Detect/data/feature/train/CLBP/mfcc_clbp_20_nonspeech_2"
+    out_path=r"E:\PythonFile\Project\Voice-Activity-Detect\data\feature\test\test_mfcc_20_clbp.npy"
 )
