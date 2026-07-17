@@ -4,7 +4,7 @@
 ![Status](https://img.shields.io/badge/status-work_in_progress-orange)
 
 ## 📖 Introduction
-This project provides an implementation of **Voice Activity Detection (VAD)** using handcrafted acoustic features (MFCC, LFCC, STFT, CQCC) combined with **Local Binary Patterns (LBP)** and **Compound Local Binary Patterns (CLBP)** encoding. It is the companion codebase for the paper: *"Voice Activity Detection with Handcrafted Features and LBP Encoding"* and *"Enhancing_Voice_Activity_Detection_Using_CLBP_Based_Texture_Encoding_on_Spectral_Features"*. 
+This project provides an implementation of **Voice Activity Detection (VAD)** using handcrafted acoustic features (MFCC, LFCC, STFT, CQCC) combined with **Local Binary Patterns (LBP)** and **Compound Local Binary Patterns (CLBP)** encoding. It is the companion codebase for the paper: *"Voice Activity Detection with Handcrafted Features and LBP Encoding"* and *"Voice Activity Detection Using CLBP-Based Texture Encoding on Spectral Features"*. 
 
 The system is designed to robustly separate human speech from background noise by analyzing texture-like properties of 2D acoustic representations (spectrograms, MFCC maps) using LBP algorithms.
 
@@ -74,4 +74,4 @@ We are actively restructuring this codebase from a research prototype (Jupyter N
 
 ## 📄 Citation
 
-If you find this code helpful in your research, please refer to the main paper located in `paper_reference/Voice_Activity_Detection_with_Handcrafted_Features_and_LBP_Encoding.pdf`, `paper_reference/Enhancing_Voice_Activity_Detection_Using_CLBP_Based_Texture_Encoding_on_Spectral_Features.pdf`
+If you find this code helpful in your research, please refer to the main paper located in `paper_reference/Voice_Activity_Detection_with_Handcrafted_Features_and_LBP_Encoding.pdf`, `paper_reference/Voice Activity Detection Using CLBP-Based Texture Encoding on Spectral Features.pdf`
